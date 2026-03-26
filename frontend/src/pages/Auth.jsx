@@ -29,7 +29,7 @@ export default function Auth() {
       const { credential } = credentialResponse;
       
       // Send the Google JWT Token to our FastAPI Backend to verify and create session
-      const response = await axios.post('http://localhost:8000/api/auth/google', {
+      const response = await axios.post('http://localhost:8001/api/auth/google', {
         token: credential
       });
 
