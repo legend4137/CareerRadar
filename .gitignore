@@ -55,3 +55,12 @@ Thumbs.db
 # Database
 sql_app.db
 *.sqlite3
+
+# Environment Variables
+.env
+.env.*
+!.env.example
+
+# App Data
+backend/uploads/
+uploads/

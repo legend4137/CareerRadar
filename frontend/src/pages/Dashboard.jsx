@@ -38,7 +38,7 @@ export default function Dashboard() {
       if (filters.dateSincePosted) queryParams.append('dateSincePosted', filters.dateSincePosted);
       queryParams.append('limit', '150');
 
-      const response = await fetch(`http://localhost:8001/api/jobs/search?${queryParams.toString()}`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/jobs/search?${queryParams.toString()}`);
       if (!response.ok) {
         throw new Error('Failed to fetch jobs.');
       }

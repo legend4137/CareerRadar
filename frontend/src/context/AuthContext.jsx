@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import axios from 'axios';
 
 const AuthContext = createContext();
 
@@ -12,7 +13,10 @@ export const AuthProvider = ({ children }) => {
     const storedUser = localStorage.getItem('mockUser');
     const storedToken = localStorage.getItem('token');
     if (storedUser) setUser(JSON.parse(storedUser));
-    if (storedToken) setToken(storedToken);
+    if (storedToken) {
+      setToken(storedToken);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+    }
     setLoading(false);
   }, []);
 
@@ -20,7 +24,10 @@ export const AuthProvider = ({ children }) => {
     setUser(userData);
     setToken(jwtToken);
     localStorage.setItem('mockUser', JSON.stringify(userData));
-    if (jwtToken) localStorage.setItem('token', jwtToken);
+    if (jwtToken) {
+      localStorage.setItem('token', jwtToken);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${jwtToken}`;
+    }
   };
 
   const logout = () => {
@@ -28,6 +35,7 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     localStorage.removeItem('mockUser');
     localStorage.removeItem('token');
+    delete axios.defaults.headers.common['Authorization'];
   };
 
   const updateProfile = (profileData) => {
