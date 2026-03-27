@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routers import auth
+from app.api.routers import auth, jobs
 from app.db.session import engine, Base
 
 # Create DB tables
@@ -18,8 +18,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include Authentication Router
+# Include Routers
 app.include_router(auth.router, prefix="/api")
+app.include_router(jobs.router, prefix="/api/jobs")
 
 @app.get('/')
 def read_root():

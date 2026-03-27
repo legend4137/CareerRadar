@@ -5,3 +5,4 @@ google-auth
 python-jose[cryptography]
 passlib[bcrypt]
 requests
+bs4
