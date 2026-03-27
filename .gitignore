@@ -64,3 +64,5 @@ sql_app.db
 # App Data
 backend/uploads/
 uploads/
+
+uploads

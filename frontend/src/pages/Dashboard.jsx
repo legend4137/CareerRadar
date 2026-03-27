@@ -11,46 +11,11 @@ import './Dashboard.css';
 const SOURCE_LABELS = {
   linkedin: 'LinkedIn',
   remotive: 'Remotive',
-  arbeitnow: 'Arbeitnow',
+  // arbeitnow: 'Arbeitnow',
   jobicy: 'Jobicy',
 };
 
-function buildUrl(source, filters) {
-  const p = new URLSearchParams();
-
-  switch (source) {
-    case 'linkedin': {
-      if (filters.keyword)        p.append('keyword', filters.keyword);
-      if (filters.location)       p.append('location', filters.location);
-      if (filters.jobType)        p.append('jobType', filters.jobType);
-      if (filters.remoteFilter)   p.append('remoteFilter', filters.remoteFilter);
-      if (filters.experienceLevel) p.append('experienceLevel', filters.experienceLevel);
-      if (filters.dateSincePosted) p.append('dateSincePosted', filters.dateSincePosted);
-      p.append('limit', '150');
-      return `http://localhost:8001/api/jobs/search?${p}`;
-    }
-    case 'remotive': {
-      if (filters.keyword) p.append('keyword', filters.keyword);
-      p.append('limit', '50');
-      return `http://localhost:8001/api/remotive-jobs/search?${p}`;
-    }
-    case 'arbeitnow': {
-      if (filters.keyword)      p.append('keyword', filters.keyword);
-      if (filters.location)     p.append('location', filters.location);
-      if (filters.remoteFilter) p.append('remote', filters.remoteFilter); // 'true' or ''
-      p.append('limit', '50');
-      return `http://localhost:8001/api/arbeitnow-jobs/search?${p}`;
-    }
-    case 'jobicy': {
-      if (filters.keyword)  p.append('keyword', filters.keyword);
-      if (filters.location) p.append('location', filters.location);
-      p.append('limit', '50');
-      return `http://localhost:8001/api/jobicy-jobs/search?${p}`;
-    }
-    default:
-      return `http://localhost:8001/api/jobs/search?${p}`;
-  }
-}
+// buildUrl removed in favor of concurrent endpoint mapping
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -59,17 +24,21 @@ export default function Dashboard() {
   const [error, setError] = useState(null);
   const [selectedJob, setSelectedJob] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [activeSource, setActiveSource] = useState('linkedin');
+  const [activeSource, setActiveSource] = useState('all');
+
+  const filteredJobs = activeSource === 'all' 
+    ? jobs 
+    : jobs.filter(j => j.source === SOURCE_LABELS[activeSource]);
 
   const jobsPerPage = 20;
   const indexOfLastJob = currentPage * jobsPerPage;
   const indexOfFirstJob = indexOfLastJob - jobsPerPage;
-  const currentJobs = jobs.slice(indexOfFirstJob, indexOfLastJob);
-  const totalPages = Math.ceil(jobs.length / jobsPerPage);
+  const currentJobs = filteredJobs.slice(indexOfFirstJob, indexOfLastJob);
+  const totalPages = Math.ceil(filteredJobs.length / jobsPerPage);
 
   const handleSourceChange = (src) => {
     setActiveSource(src);
-    setJobs([]);
+    // Removed setJobs([]) so the jobs don't disappear when clicking a tab!
     setError(null);
     setCurrentPage(1);
   };
@@ -89,17 +58,60 @@ export default function Dashboard() {
       if (filters.dateSincePosted) queryParams.append('dateSincePosted', filters.dateSincePosted);
       queryParams.append('limit', '150');
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/jobs/search?${queryParams.toString()}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch jobs.');
+      const endpoints = [];
+      const base = import.meta.env.VITE_API_URL;
+      
+      // Determine what endpoints to fetch based on activeSource
+      if (activeSource === 'all' || activeSource === 'linkedin') {
+        const p = new URLSearchParams(queryParams); p.set('limit', 50);
+        endpoints.push({ id: 'linkedin', url: `${base}/api/jobs/search?${p}` });
       }
-      const data = await response.json();
-      // Inject source label into each job for the modal "Apply on X" text
-      const labelled = (data.jobs || []).map((j) => ({
-        ...j,
-        source: j.source || SOURCE_LABELS[activeSource],
-      }));
-      setJobs(labelled);
+      if (activeSource === 'all' || activeSource === 'remotive') {
+        const p = new URLSearchParams(queryParams); p.set('limit', 50);
+        endpoints.push({ id: 'remotive', url: `${base}/api/remotive-jobs/search?${p}` });
+      }
+      // if (activeSource === 'all' || activeSource === 'arbeitnow') {
+      //   const p = new URLSearchParams(queryParams); p.set('limit', 50);
+      //   if (filters.remoteFilter) p.set('remote', filters.remoteFilter);
+      //   endpoints.push({ id: 'arbeitnow', url: `${base}/api/arbeitnow-jobs/search?${p}` });
+      // }
+      if (activeSource === 'all' || activeSource === 'jobicy') {
+        const p = new URLSearchParams(queryParams); p.set('limit', 50);
+        endpoints.push({ id: 'jobicy', url: `${base}/api/jobicy-jobs/search?${p}` });
+      }
+
+      // Fetch all required endpoints concurrently
+      const responses = await Promise.allSettled(
+        endpoints.map(async (e) => {
+          const r = await fetch(e.url);
+          if (!r.ok) throw new Error(`Failed code ${r.status}`);
+          const data = await r.json();
+          return { sourceId: e.id, data };
+        })
+      );
+
+      // Aggregate all jobs and attach source labels
+      let allJobs = [];
+      responses.forEach(res => {
+        if (res.status === 'fulfilled' && res.value.data.jobs) {
+           const labelled = res.value.data.jobs.map(j => ({
+             ...j,
+             source: j.source || SOURCE_LABELS[res.value.sourceId]
+           }));
+           allJobs.push(...labelled);
+        } else if (res.status === 'rejected') {
+           console.warn("One of the sources failed to fetch", res.reason);
+        }
+      });
+      
+      // Basic client-side deduplication/randomization
+      allJobs.sort(() => Math.random() - 0.5);
+      
+      if (allJobs.length === 0) {
+        throw new Error('No jobs could be found matching those filters.');
+      }
+      
+      setJobs(allJobs);
     } catch (err) {
       setError(err.message || 'An error occurred during search.');
     } finally {
@@ -110,7 +122,7 @@ export default function Dashboard() {
   const handleNextPage = () => { if (currentPage < totalPages) setCurrentPage(currentPage + 1); };
   const handlePrevPage = () => { if (currentPage > 1) setCurrentPage(currentPage - 1); };
 
-  const sourceLabel = SOURCE_LABELS[activeSource];
+  const sourceLabel = activeSource === 'all' ? 'All Verified Sources' : SOURCE_LABELS[activeSource];
 
   return (
     <div className="dashboard-container animate-fade-in">
@@ -124,7 +136,12 @@ export default function Dashboard() {
         <SourceSelector activeSource={activeSource} onSourceChange={handleSourceChange} />
 
         {/* ── Filters (adapts per source) ── */}
-        <JobFilters onSearch={searchJobs} isLoading={isLoading} source={activeSource} />
+        <JobFilters 
+          onSearch={searchJobs} 
+          isLoading={isLoading} 
+          source={activeSource} 
+          defaultKeyword={user?.role || ''} 
+        />
 
         {error && (
           <div
@@ -154,14 +171,14 @@ export default function Dashboard() {
               <h3>Scanning {sourceLabel} for Jobs...</h3>
               <p style={{ color: 'var(--text-secondary)' }}>This might take a moment as we fetch and aggregate data.</p>
             </div>
-          ) : jobs.length > 0 ? (
+          ) : filteredJobs.length > 0 ? (
             <>
               <div
                 className="results-header"
                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}
               >
                 <h2 style={{ fontSize: '1.5rem', margin: 0 }}>
-                  Found <span className="text-gradient">{jobs.length}</span> Roles on{' '}
+                  Found <span className="text-gradient">{filteredJobs.length}</span> Roles on{' '}
                   <span className="text-gradient">{sourceLabel}</span>
                 </h2>
               </div>

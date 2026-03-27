@@ -3,6 +3,13 @@ import './SourceSelector.css';
 
 const SOURCES = [
   {
+    id: 'all',
+    label: 'All Sources',
+    logo: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%233b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>',
+    color: '#3b82f6',
+    glow: 'rgba(59, 130, 246, 0.35)',
+  },
+  {
     id: 'linkedin',
     label: 'LinkedIn',
     logo: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/linkedin.svg',
@@ -16,13 +23,13 @@ const SOURCES = [
     color: '#00c853',
     glow: 'rgba(0, 200, 83, 0.35)',
   },
-  {
-    id: 'arbeitnow',
-    label: 'Arbeitnow',
-    logo: 'https://www.arbeitnow.com/favicon.ico',
-    color: '#ff6b35',
-    glow: 'rgba(255, 107, 53, 0.35)',
-  },
+  // {
+  //   id: 'arbeitnow',
+  //   label: 'Arbeitnow',
+  //   logo: 'https://www.arbeitnow.com/favicon.ico',
+  //   color: '#ff6b35',
+  //   glow: 'rgba(255, 107, 53, 0.35)',
+  // },
   {
     id: 'jobicy',
     label: 'Jobicy',
