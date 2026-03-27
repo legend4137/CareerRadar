@@ -43,7 +43,7 @@ export default function JobModal({ job, onClose }) {
           
           {job.link && (
             <a href={job.link} target="_blank" rel="noopener noreferrer" className="job-modal-apply-btn">
-              Apply on LinkedIn <ExternalLink size={16} />
+              Apply on {job.source || 'LinkedIn'} <ExternalLink size={16} />
             </a>
           )}
         </div>

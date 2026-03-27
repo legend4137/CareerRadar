@@ -6,7 +6,20 @@ import Home from './pages/Home';
 import Auth from './pages/Auth';
 import Onboarding from './pages/Onboarding';
 import Dashboard from './pages/Dashboard';
+import Profile from './pages/Profile';
 import './App.css';
+
+// Prevent logged-in users from seeing the login screen
+const AuthRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) return <div>Loading...</div>;
+  if (user) {
+    return <Navigate to={user.profileComplete ? "/dashboard" : "/onboarding"} replace />;
+  }
+  
+  return children;
+};
 
 // A simple protected route wrapper
 const ProtectedRoute = ({ children, requireProfile = false }) => {
@@ -36,8 +49,8 @@ function AppContent() {
       <Navbar />
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Auth />} />
-        <Route path="/signup" element={<Auth />} />
+        <Route path="/login" element={<AuthRoute><Auth /></AuthRoute>} />
+        <Route path="/signup" element={<AuthRoute><Auth /></AuthRoute>} />
         <Route 
           path="/onboarding" 
           element={
@@ -51,6 +64,14 @@ function AppContent() {
           element={
             <ProtectedRoute requireProfile={true}>
               <Dashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/profile" 
+          element={
+            <ProtectedRoute requireProfile={true}>
+              <Profile />
             </ProtectedRoute>
           } 
         />

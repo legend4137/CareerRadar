@@ -10,3 +10,5 @@ class User(Base):
     name = Column(String, nullable=True)
     profile_complete = Column(Boolean, default=False)
     role = Column(String, nullable=True)
+    job_description = Column(String, nullable=True)
+    resume_filepath = Column(String, nullable=True)

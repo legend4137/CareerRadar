@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { UploadCloud, CheckCircle2, ChevronRight, Briefcase, Code, LineChart, Megaphone, MonitorSmartphone, Target } from 'lucide-react';
+import axios from 'axios';
+import { UploadCloud, CheckCircle2, ChevronRight, Briefcase, Code, LineChart, Megaphone, MonitorSmartphone, Target, Loader2 } from 'lucide-react';
 import './Onboarding.css';
 
 const ROLES = [
@@ -16,22 +17,80 @@ const ROLES = [
 export default function Onboarding() {
   const [step, setStep] = useState(1);
   const [selectedRole, setSelectedRole] = useState(null);
+  const [jobDescription, setJobDescription] = useState('');
   const [file, setFile] = useState(null);
-  const { updateProfile } = useAuth();
+  const [existingFileName, setExistingFileName] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true);
+  
+  const { user, updateProfile } = useAuth();
   const navigate = useNavigate();
 
-  const handleComplete = () => {
-    updateProfile({
-      role: selectedRole.name,
-      resumeUploaded: file ? true : false
-    });
-    navigate('/dashboard');
+  // Fetch current profile if they already have one (for Update Profile feature)
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/users/me`);
+        const data = response.data;
+        if (data.role) {
+          const matchedRole = ROLES.find(r => r.name === data.role);
+          if (matchedRole) setSelectedRole(matchedRole);
+        }
+        if (data.job_description) {
+          setJobDescription(data.job_description);
+        }
+        if (data.resume_filepath) {
+          const parts = data.resume_filepath.split('/');
+          setExistingFileName(parts[parts.length - 1]);
+        }
+      } catch (err) {
+        console.error("Failed to load existing profile:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadProfile();
+  }, []);
+
+  const handleComplete = async () => {
+    setSubmitting(true);
+    try {
+      const formData = new FormData();
+      if (selectedRole) formData.append('role', selectedRole.name);
+      if (jobDescription) formData.append('job_description', jobDescription);
+      if (file) formData.append('resume', file);
+
+      const token = localStorage.getItem('token');
+      const response = await axios.put(`${import.meta.env.VITE_API_URL}/api/users/profile`, formData, {
+        headers: { 
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      // Update local auth context
+      updateProfile({
+        role: selectedRole.name,
+        profileComplete: response.data.profileComplete
+      });
+      
+      navigate('/dashboard');
+    } catch (err) {
+      console.error("Failed to save profile:", err);
+      const backendMsg = err.response?.data?.detail;
+      const errorString = typeof backendMsg === 'string' ? backendMsg : JSON.stringify(backendMsg);
+      alert(`Failed to save profile: ${errorString || err.message}`);
+      setSubmitting(false);
+    }
   };
+
+  if (loading) {
+    return <div className="onboard-container"><Loader2 className="spinner" size={48} /></div>;
+  }
 
   return (
     <div className="onboard-container animate-fade-in">
       <div className="onboard-card glass-panel">
-        {/* Progress Bar */}
         <div className="onboard-progress">
           <div className={`progress-step ${step >= 1 ? 'active' : ''}`}>1</div>
           <div className={`progress-line ${step >= 2 ? 'active' : ''}`}></div>
@@ -40,8 +99,8 @@ export default function Onboarding() {
 
         {step === 1 ? (
           <div className="step-content animate-fade-in">
-            <h2 className="step-title">What field are you looking to apply in?</h2>
-            <p className="step-subtitle">This helps our AI personalize your Opportunity Radar.</p>
+            <h2 className="step-title">Profile Configuration</h2>
+            <p className="step-subtitle">Tell us about the roles you are targeting.</p>
             
             <div className="role-grid">
               {ROLES.map((role) => {
@@ -58,6 +117,20 @@ export default function Onboarding() {
                   </div>
                 );
               })}
+            </div>
+
+            <div className="textarea-container" style={{ width: '100%', marginBottom: '2rem', textAlign: 'left' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                Target Job Description or Keywords (Optional)
+              </label>
+              <textarea 
+                className="glass-panel"
+                rows="4"
+                placeholder="Paste an example job description or list specific skills you want the AI to match against..."
+                value={jobDescription}
+                onChange={(e) => setJobDescription(e.target.value)}
+                style={{ width: '100%', padding: '1rem', color: 'white', border: '1px solid var(--glass-border)', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', resize: 'vertical' }}
+              />
             </div>
 
             <button 
@@ -89,22 +162,28 @@ export default function Onboarding() {
                 Browse Files
               </label>
 
-              {file && (
+              {/* Show locally selected file OR previously uploaded file */}
+              {file ? (
                 <div className="file-preview animate-fade-in">
                   <CheckCircle2 size={16} color="#10b981" />
                   <span>{file.name}</span>
                 </div>
-              )}
+              ) : existingFileName ? (
+                <div className="file-preview animate-fade-in" style={{ background: 'rgba(99, 102, 241, 0.1)', borderColor: 'rgba(99, 102, 241, 0.2)', color: 'var(--accent-primary)' }}>
+                  <CheckCircle2 size={16} />
+                  <span>Current: {existingFileName}</span>
+                </div>
+              ) : null}
             </div>
 
             <div className="step-actions">
-              <button className="btn btn-secondary" onClick={() => setStep(1)}>Back</button>
+              <button className="btn btn-secondary" onClick={() => setStep(1)} disabled={submitting}>Back</button>
               <button 
                 className="btn btn-primary step-next-btn"
-                disabled={!file}
+                disabled={(!file && !existingFileName) || submitting}
                 onClick={handleComplete}
               >
-                Complete Profile <CheckCircle2 size={18} style={{ marginLeft: "8px" }} />
+                {submitting ? 'Saving...' : 'Complete Profile'} <CheckCircle2 size={18} style={{ marginLeft: "8px" }} />
               </button>
             </div>
           </div>
