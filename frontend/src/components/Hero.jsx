@@ -13,19 +13,19 @@ export default function Hero() {
           <span className="sparkle">✨</span> AI-Powered Career Assistant
         </div>
         
-        <h1 className="hero-title animate-fade-in delay-100">
+        <h1 id="problem" className="hero-title animate-fade-in delay-100" style={{ scrollMarginTop: '100px' }}>
           Stop Missing Out on <br/>
           <span className="text-gradient">Career-Defining</span> Opportunities
         </h1>
         
-        <p className="hero-subtitle animate-fade-in delay-200">
+        <p id="solution" className="hero-subtitle animate-fade-in delay-200" style={{ scrollMarginTop: '100px' }}>
           Are you losing track of internships, hackathons, and research grants scattered across dozens of platforms? 
-          <strong> OpportunityRadar</strong> uses AI to analyze your resume, discover matching opportunities, and rank them by your unique "fit score".
+          <strong> CareerRadar</strong> uses AI to analyze your resume, discover matching opportunities, and rank them by your unique "fit score".
         </p>
 
         <div className="hero-cta animate-fade-in delay-300">
-          <button className="btn btn-primary btn-lg">Start Free Trial 🚀</button>
-          <button className="btn btn-secondary btn-lg">View Demo</button>
+          <button className="btn btn-primary btn-lg">Try now</button>
+          {/* <button className="btn btn-secondary btn-lg">View Demo</button> */}
         </div>
 
         <div className="stats-container animate-fade-in delay-300">

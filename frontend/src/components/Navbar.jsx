@@ -44,7 +44,7 @@ export default function Navbar() {
       <div className="navbar-content">
         <Link to="/" className="navbar-logo" style={{ textDecoration: 'none' }}>
           <div className="logo-icon"></div>
-          <span className="logo-text text-primary">Opportunity<span className="text-gradient">Radar</span></span>
+          <span className="logo-text text-primary">Career<span className="text-gradient">Radar</span></span>
         </Link>
         
         {/* Do NOT render regular nav links if user is authenticated OR if on auth page */}

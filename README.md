@@ -1,6 +1,6 @@
 # CareerRadar 🎯
 
-An AI-powered Opportunity Radar that helps college students find the perfect internships, hackathons, research programs, and competitions tailored exactly to their skills and resume.
+An AI-powered Career Radar that helps college students find the perfect internships, hackathons, research programs, and competitions tailored exactly to their skills and resume.
 
 ## Features
 - **Smart Onboarding:** Tell us your field and upload your resume.
