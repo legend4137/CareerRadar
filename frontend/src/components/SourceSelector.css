@@ -1,0 +1,143 @@
+.source-selector-wrapper {
+  margin-bottom: 1.5rem;
+}
+
+.source-selector-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+}
+
+.source-selector-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+/* ── Source Button ── */
+.source-btn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 1.1rem 0.75rem;
+  cursor: pointer;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 16px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+  overflow: hidden;
+  font-family: inherit;
+  color: var(--text-secondary);
+}
+
+.source-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 0%, var(--src-glow, transparent) 0%, transparent 65%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.source-btn:hover {
+  transform: translateY(-3px);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: var(--text-primary);
+  box-shadow: 0 8px 24px var(--src-glow, rgba(0,0,0,0.2));
+}
+
+.source-btn:hover::before {
+  opacity: 1;
+}
+
+/* Active state */
+.source-btn--active {
+  border-color: var(--src-color);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  box-shadow:
+    0 0 0 1px var(--src-color),
+    0 8px 32px var(--src-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transform: translateY(-2px);
+}
+
+.source-btn--active::before {
+  opacity: 1;
+}
+
+/* Logo */
+.source-btn-logo-wrap {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.source-btn-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 6px var(--src-glow, transparent));
+  transition: transform 0.2s ease;
+}
+
+.source-btn:hover .source-btn-logo,
+.source-btn--active .source-btn-logo {
+  transform: scale(1.1);
+}
+
+.source-btn-logo-fallback {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--src-color);
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: white;
+}
+
+/* Label */
+.source-btn-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition: color 0.2s;
+}
+
+.source-btn--active .source-btn-name {
+  color: var(--src-color);
+}
+
+/* Active dot indicator */
+.source-btn-active-dot {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--src-color);
+  box-shadow: 0 0 6px var(--src-color);
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .source-selector-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

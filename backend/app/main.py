@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routers import auth, jobs
+from app.api.routers import auth, jobs, remotive_jobs, arbeitnow_jobs, jobicy_jobs
 from app.db.session import engine, Base
 
 # Create DB tables
@@ -21,6 +21,9 @@ app.add_middleware(
 # Include Routers
 app.include_router(auth.router, prefix="/api")
 app.include_router(jobs.router, prefix="/api/jobs")
+app.include_router(remotive_jobs.router, prefix="/api/remotive-jobs")
+app.include_router(arbeitnow_jobs.router, prefix="/api/arbeitnow-jobs")
+app.include_router(jobicy_jobs.router, prefix="/api/jobicy-jobs")
 
 @app.get('/')
 def read_root():
