@@ -15,27 +15,38 @@ const ROLES = [
   { id: 'other', name: 'Other', icon: Briefcase },
 ];
 
+const LOCATIONS = [
+  { id: 'remote', name: 'Remote' },
+  { id: 'india', name: 'India' },
+  { id: 'usa', name: 'USA' },
+  { id: 'europe', name: 'Europe' },
+  { id: 'uk', name: 'UK' },
+  { id: 'canada', name: 'Canada' },
+];
+
 export default function Onboarding() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [customRole, setCustomRole] = useState('');
   const [submitting, setSubmitting] = useState(false);
   
-  // Step 1: Resume
+  // Step 1: Core Configuration
+  const [primaryRole, setPrimaryRole] = useState(null);
+  const [customPrimaryRole, setCustomPrimaryRole] = useState('');
+  const [jobDescription, setJobDescription] = useState('');
+
+  // Step 2: Resume
   const [file, setFile] = useState(null);
   const [existingFileName, setExistingFileName] = useState('');
   
-  // Step 2: Job Preferences
+  // Step 3: Market Preferences
   const [selectedRoles, setSelectedRoles] = useState([]);
   const [customRole, setCustomRole] = useState('');
-  
-  // Step 3: Location Preferences
   const [selectedLocations, setSelectedLocations] = useState([]);
   const [customLocation, setCustomLocation] = useState('');
   
-  // Step 4: Intro
+  // Step 4: Final Intro
   const [whyHireMe, setWhyHireMe] = useState('');
-  
+
   const { user, updateProfile } = useAuth();
   const navigate = useNavigate();
 
@@ -44,24 +55,28 @@ export default function Onboarding() {
       try {
         const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/users/me`);
         const data = response.data;
+        
+        // Populate Step 1 fields
         if (data.role) {
           const matchedRole = ROLES.find(r => r.name === data.role);
           if (matchedRole) {
-            setSelectedRole(matchedRole);
+            setPrimaryRole(matchedRole);
           } else {
-            // User previously entered a custom role
-            setSelectedRole(ROLES.find(r => r.id === 'other'));
-            setCustomRole(data.role);
+            setPrimaryRole(ROLES.find(r => r.id === 'other'));
+            setCustomPrimaryRole(data.role);
           }
         }
         if (data.job_description) {
           setJobDescription(data.job_description);
         }
+
+        // Populate Step 2 fields
         if (data.resume_filepath) {
           const parts = data.resume_filepath.split('/');
           setExistingFileName(parts[parts.length - 1]);
         }
         
+        // Populate Step 3 & 4 fields
         if (data.preferences) {
           setSelectedRoles(data.preferences.job_roles || []);
           setSelectedLocations(data.preferences.locations || []);
@@ -76,7 +91,7 @@ export default function Onboarding() {
     loadProfile();
   }, []);
 
-  const toggleRole = (roleName) => {
+  const toggleRolePreference = (roleName) => {
     setSelectedRoles(prev => 
       prev.includes(roleName) 
         ? prev.filter(r => r !== roleName) 
@@ -84,14 +99,14 @@ export default function Onboarding() {
     );
   };
 
-  const addCustomRole = () => {
+  const addCustomRolePreference = () => {
     if (customRole.trim() && !selectedRoles.includes(customRole.trim())) {
       setSelectedRoles(prev => [...prev, customRole.trim()]);
       setCustomRole('');
     }
   };
 
-  const toggleLocation = (locName) => {
+  const toggleLocationPreference = (locName) => {
     setSelectedLocations(prev => 
       prev.includes(locName) 
         ? prev.filter(l => l !== locName) 
@@ -99,43 +114,37 @@ export default function Onboarding() {
     );
   };
 
-  const addCustomLocation = () => {
+  const addCustomLocationPreference = () => {
     if (customLocation.trim() && !selectedLocations.includes(customLocation.trim())) {
       setSelectedLocations(prev => [...prev, customLocation.trim()]);
       setCustomLocation('');
     }
   };
 
-  const handleResumeUpload = async () => {
-    if (!file) {
-      setStep(2);
-      return;
-    }
-    
+  const saveProfileConfig = async () => {
     setSubmitting(true);
     try {
       const formData = new FormData();
-      let finalRole = '';
-      if (selectedRole) {
-        finalRole = selectedRole.id === 'other' && customRole.trim() !== '' 
-          ? customRole.trim() 
-          : selectedRole.name;
-        formData.append('role', finalRole);
-      }
+      const finalRole = primaryRole?.id === 'other' ? customPrimaryRole : primaryRole?.name;
+      if (finalRole) formData.append('role', finalRole);
       if (jobDescription) formData.append('job_description', jobDescription);
       if (file) formData.append('resume', file);
 
       const token = localStorage.getItem('token');
-      await axios.put(`${import.meta.env.VITE_API_URL}/api/users/profile`, formData, {
+      const response = await axios.put(`${import.meta.env.VITE_API_URL}/api/users/profile`, formData, {
         headers: { 
           'Content-Type': 'multipart/form-data',
           'Authorization': `Bearer ${token}`
         }
       });
-      setStep(2);
+      
+      // Update local context
+      if (finalRole) updateProfile({ role: finalRole });
+      
+      setStep(prev => prev + 1);
     } catch (err) {
-      console.error("Resume upload failed:", err);
-      alert("Failed to upload resume. Please try again.");
+      console.error("Failed to save profile config:", err);
+      alert("Failed to update profile. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -155,7 +164,7 @@ export default function Onboarding() {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
-      // Update local auth context (optional, depends on how much you want to sync)
+      // Update local auth context
       updateProfile({ profileComplete: true });
       
       navigate('/dashboard');
@@ -172,7 +181,7 @@ export default function Onboarding() {
   }
 
   const renderStepProgress = () => (
-    <div className="onboard-progress">
+    <div className="onboard-progress" style={{ marginBottom: '2.5rem' }}>
       {[1, 2, 3, 4].map((s) => (
         <React.Fragment key={s}>
           <div className={`progress-step ${step >= s ? 'active' : ''}`}>{s}</div>
@@ -185,35 +194,31 @@ export default function Onboarding() {
   return (
     <div className="onboard-container animate-fade-in">
       <div className="onboard-card glass-panel">
-        <div className="onboard-progress">
-          <div className={`progress-step ${step >= 1 ? 'active' : ''}`}>1</div>
-          <div className={`progress-line ${step >= 2 ? 'active' : ''}`}></div>
-          <div className={`progress-step ${step >= 2 ? 'active' : ''}`}>2</div>
-        </div>
+        {renderStepProgress()}
 
-        {step === 1 ? (
+        {step === 1 && (
           <div className="step-content animate-fade-in">
             <h2 className="step-title">Profile Configuration</h2>
-            <p className="step-subtitle">Tell us about the roles you are targeting.</p>
+            <p className="step-subtitle">Tell us about the primary role you are targeting.</p>
             
-            <div className="role-grid">
+            <div className="role-grid" style={{ marginBottom: '2rem' }}>
               {ROLES.map((role) => {
                 const Icon = role.icon;
                 return (
                   <div 
                     key={role.id} 
-                    className={`role-card ${selectedRole?.id === role.id ? 'selected' : ''}`}
-                    onClick={() => setSelectedRole(role)}
+                    className={`role-card ${primaryRole?.id === role.id ? 'selected' : ''}`}
+                    onClick={() => setPrimaryRole(role)}
                   >
                     <Icon className="role-icon" size={28} />
                     <span className="role-name">{role.name}</span>
-                    {selectedRole?.id === role.id && <CheckCircle2 className="check-icon" size={20} />}
+                    {primaryRole?.id === role.id && <CheckCircle2 className="check-icon" size={20} />}
                   </div>
                 );
               })}
             </div>
 
-            {selectedRole?.id === 'other' && (
+            {primaryRole?.id === 'other' && (
               <div className="custom-role-container animate-fade-in" style={{ width: '100%', marginBottom: '1.5rem', textAlign: 'left' }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
                   Specify Your Preferred Role
@@ -222,15 +227,15 @@ export default function Onboarding() {
                   type="text" 
                   className="glass-panel" 
                   placeholder="e.g. UX Designer, DevOps Engineer..." 
-                  value={customRole}
-                  onChange={(e) => setCustomRole(e.target.value)}
+                  value={customPrimaryRole}
+                  onChange={(e) => setCustomPrimaryRole(e.target.value)}
                   style={{ width: '100%', padding: '1rem', color: 'white', border: '1px solid var(--glass-border)', borderRadius: '8px', background: 'rgba(255,255,255,0.05)' }}
                 />
               </div>
             )}
 
             <div className="textarea-container" style={{ width: '100%', marginBottom: '2rem', textAlign: 'left' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
                 Target Job Description or Keywords (Optional)
               </label>
               <textarea 
@@ -245,13 +250,15 @@ export default function Onboarding() {
 
             <button 
               className="btn btn-primary step-next-btn"
-              disabled={!selectedRole || (selectedRole.id === 'other' && !customRole.trim())}
+              disabled={!primaryRole || (primaryRole.id === 'other' && !customPrimaryRole.trim())}
               onClick={() => setStep(2)}
             >
               Continue <ChevronRight size={18} />
             </button>
           </div>
-        ) : (
+        )}
+
+        {step === 2 && (
           <div className="step-content animate-fade-in">
             <h2 className="step-title">Upload your Resume</h2>
             <p className="step-subtitle">Our AI reads your skills and maps them to perfect opportunities.</p>
@@ -285,66 +292,14 @@ export default function Onboarding() {
               ) : null}
             </div>
 
-            <button 
-              className="btn btn-primary step-next-btn"
-              disabled={submitting}
-              onClick={handleResumeUpload}
-            >
-              {submitting ? 'Uploading...' : 'Continue'} <ChevronRight size={18} />
-            </button>
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="step-content animate-fade-in">
-            <h2 className="step-title">Job Preferences</h2>
-            <p className="step-subtitle">Select the roles you are most interested in pursuing.</p>
-            
-            <div className="role-grid">
-              {ROLES.map((role) => {
-                const Icon = role.icon;
-                const isSelected = selectedRoles.includes(role.name);
-                return (
-                  <div 
-                    key={role.id} 
-                    className={`role-card ${isSelected ? 'selected' : ''}`}
-                    onClick={() => toggleRole(role.name)}
-                  >
-                    <Icon className="role-icon" size={28} />
-                    <span className="role-name">{role.name}</span>
-                    {isSelected && <CheckCircle2 className="check-icon" size={20} />}
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="custom-input-group">
-              <input 
-                type="text" 
-                placeholder="Other role (e.g. Product Manager)" 
-                value={customRole}
-                onChange={(e) => setCustomRole(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && addCustomRole()}
-              />
-              <button onClick={addCustomRole} className="btn-icon"><Plus size={20} /></button>
-            </div>
-
-            <div className="selected-chips">
-              {selectedRoles.filter(r => !ROLES.some(role => role.name === r)).map(r => (
-                <span key={r} className="chip" onClick={() => toggleRole(r)}>
-                  {r} <span className="chip-remove">×</span>
-                </span>
-              ))}
-            </div>
-
             <div className="step-actions">
-              <button className="btn btn-secondary" onClick={() => setStep(1)}>Back</button>
+              <button className="btn btn-secondary" onClick={() => setStep(1)} disabled={submitting}>Back</button>
               <button 
                 className="btn btn-primary step-next-btn"
-                disabled={selectedRoles.length === 0}
-                onClick={() => setStep(3)}
+                disabled={submitting}
+                onClick={saveProfileConfig}
               >
-                Continue <ChevronRight size={18} />
+                {submitting ? 'Saving...' : 'Continue'} <ChevronRight size={18} />
               </button>
             </div>
           </div>
@@ -352,49 +307,75 @@ export default function Onboarding() {
 
         {step === 3 && (
           <div className="step-content animate-fade-in">
-            <h2 className="step-title">Location Preferences</h2>
-            <p className="step-subtitle">Where would you like to work? You can choose multiple.</p>
+            <h2 className="step-title">Market Preferences</h2>
+            <p className="step-subtitle">What else are you open to? Choose multiple roles and locations.</p>
             
-            <div className="location-grid">
-              {LOCATIONS.map((loc) => {
-                const isSelected = selectedLocations.includes(loc.name);
-                return (
-                  <div 
-                    key={loc.id} 
-                    className={`loc-card ${isSelected ? 'selected' : ''}`}
-                    onClick={() => toggleLocation(loc.name)}
-                  >
-                    <MapPin size={20} className={isSelected ? 'text-accent' : ''} />
-                    <span>{loc.name}</span>
-                  </div>
-                );
-              })}
+            <div style={{ width: '100%', textAlign: 'left', marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', marginBottom: '1rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Roles Interests</label>
+              <div className="role-grid">
+                {ROLES.filter(r => r.id !== 'other').map((role) => {
+                  const Icon = role.icon;
+                  const isSelected = selectedRoles.includes(role.name);
+                  return (
+                    <div 
+                      key={role.id} 
+                      className={`role-card ${isSelected ? 'selected' : ''}`}
+                      onClick={() => toggleRolePreference(role.name)}
+                      style={{ padding: '1rem' }}
+                    >
+                      <Icon className="role-icon" size={20} />
+                      <span className="role-name" style={{ fontSize: '0.85rem' }}>{role.name}</span>
+                      {isSelected && <CheckCircle2 className="check-icon" size={16} />}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="custom-input-group" style={{ marginTop: '1rem' }}>
+                <input 
+                  type="text" 
+                  placeholder="Other role..." 
+                  value={customRole}
+                  onChange={(e) => setCustomRole(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && addCustomRolePreference()}
+                />
+                <button onClick={addCustomRolePreference} className="btn-icon"><Plus size={20} /></button>
+              </div>
             </div>
 
-            <div className="custom-input-group">
-              <input 
-                type="text" 
-                placeholder="Other location (e.g. Singapore)" 
-                value={customLocation}
-                onChange={(e) => setCustomLocation(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && addCustomLocation()}
-              />
-              <button onClick={addCustomLocation} className="btn-icon"><Plus size={20} /></button>
-            </div>
-
-            <div className="selected-chips">
-              {selectedLocations.filter(l => !LOCATIONS.some(loc => loc.name === l)).map(l => (
-                <span key={l} className="chip" onClick={() => toggleLocation(l)}>
-                  {l} <span className="chip-remove">×</span>
-                </span>
-              ))}
+            <div style={{ width: '100%', textAlign: 'left', marginBottom: '2rem' }}>
+              <label style={{ display: 'block', marginBottom: '1rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Location Preferences</label>
+              <div className="location-grid">
+                {LOCATIONS.map((loc) => {
+                  const isSelected = selectedLocations.includes(loc.name);
+                  return (
+                    <div 
+                      key={loc.id} 
+                      className={`loc-card ${isSelected ? 'selected' : ''}`}
+                      onClick={() => toggleLocationPreference(loc.name)}
+                    >
+                      <MapPin size={18} className={isSelected ? 'text-accent' : ''} />
+                      <span style={{ fontSize: '0.9rem' }}>{loc.name}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="custom-input-group" style={{ marginTop: '1rem' }}>
+                <input 
+                  type="text" 
+                  placeholder="Other location..." 
+                  value={customLocation}
+                  onChange={(e) => setCustomLocation(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && addCustomLocationPreference()}
+                />
+                <button onClick={addCustomLocationPreference} className="btn-icon"><Plus size={20} /></button>
+              </div>
             </div>
 
             <div className="step-actions">
               <button className="btn btn-secondary" onClick={() => setStep(2)}>Back</button>
               <button 
                 className="btn btn-primary step-next-btn"
-                disabled={selectedLocations.length === 0}
+                disabled={selectedRoles.length === 0 && selectedLocations.length === 0}
                 onClick={() => setStep(4)}
               >
                 Continue <ChevronRight size={18} />
