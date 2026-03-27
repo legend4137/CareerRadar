@@ -12,12 +12,27 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const storedUser = localStorage.getItem('mockUser');
     const storedToken = localStorage.getItem('token');
-    if (storedUser) setUser(JSON.parse(storedUser));
+    
     if (storedToken) {
       setToken(storedToken);
       axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+      
+      // Fetch latest profile to ensure data like 'name' is synced
+      axios.get(`${import.meta.env.VITE_API_URL}/api/users/me`)
+        .then(response => {
+          const userData = response.data;
+          setUser(userData);
+          localStorage.setItem('mockUser', JSON.stringify(userData));
+        })
+        .catch(err => {
+          console.error("Failed to sync profile:", err);
+          if (storedUser) setUser(JSON.parse(storedUser));
+        })
+        .finally(() => setLoading(false));
+    } else {
+      if (storedUser) setUser(JSON.parse(storedUser));
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   const login = (userData, jwtToken) => {

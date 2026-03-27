@@ -1,18 +1,87 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from google.oauth2 import id_token
 from google.auth.transport import requests
+from typing import Optional
 
 from app.db.session import get_db
-from app.models.user import User
+from app.models.user import User, NormalUser
 from app.core.config import settings
-from app.core.security import create_access_token
+from app.core.security import create_access_token, get_password_hash, verify_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 class GoogleAuthRequest(BaseModel):
     token: str
+
+class SignupRequest(BaseModel):
+    name: str  # Added name
+    email: EmailStr
+    password: str
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+@router.post("/signup")
+def signup(request: SignupRequest, db: Session = Depends(get_db)):
+    # Check if user already exists in NormalUser or User (email uniqueness)
+    user_by_email = db.query(NormalUser).filter(NormalUser.email == request.email).first()
+    if not user_by_email:
+        user_by_email = db.query(User).filter(User.email == request.email).first()
+        
+    if user_by_email:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Create normal user
+    new_user = NormalUser(
+        name=request.name,
+        email=request.email,
+        hashed_password=get_password_hash(request.password),
+        profile_complete=False
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    
+    access_token = create_access_token(data={"sub": f"normal:{new_user.id}", "email": new_user.email})
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": new_user.id,
+            "email": new_user.email,
+            "name": new_user.name,
+            "profileComplete": new_user.profile_complete
+        }
+    }
+
+@router.post("/login")
+def login(request: LoginRequest, db: Session = Depends(get_db)):
+    # Find user by email in NormalUser table
+    user = db.query(NormalUser).filter(NormalUser.email == request.email).first()
+    
+    if not user or not user.hashed_password:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    if not verify_password(request.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    access_token = create_access_token(data={"sub": f"normal:{user.id}", "email": user.email})
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "profileComplete": user.profile_complete,
+            "role": user.role
+        }
+    }
 
 @router.post("/google")
 def google_auth(request: GoogleAuthRequest, db: Session = Depends(get_db)):
@@ -49,7 +118,7 @@ def google_auth(request: GoogleAuthRequest, db: Session = Depends(get_db)):
             db.refresh(user)
 
     # Generate JWT Session Block
-    access_token = create_access_token(data={"sub": str(user.id), "email": user.email})
+    access_token = create_access_token(data={"sub": f"google:{user.id}", "email": user.email})
     
     return {
         "access_token": access_token,

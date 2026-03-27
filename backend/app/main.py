@@ -5,6 +5,8 @@ import os
 
 from app.api.routers import auth, jobs, remotive_jobs, arbeitnow_jobs, jobicy_jobs, users
 from app.db.session import engine, Base
+from app.models.user import User, NormalUser
+from app.models.preference import UserPreference
 
 # Ensure upload directory exists before mounting
 os.makedirs("uploads", exist_ok=True)

@@ -35,8 +35,9 @@ export default function Navbar() {
 
   const isAuthPage = ['/login', '/signup', '/onboarding'].includes(location.pathname);
 
-  // Get user's initial or default to 'U'
-  const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : 'U';
+  // Get user's display name or fallback
+  const displayName = user?.name || (user?.email ? user.email.split('@')[0] : 'User');
+  const userInitial = displayName.charAt(0).toUpperCase();
 
   return (
     <header className="navbar-container glass-panel">
@@ -66,7 +67,7 @@ export default function Navbar() {
                    <div className="profile-avatar">
                      {userInitial}
                    </div>
-                   <span className="hide-on-mobile" style={{ marginRight: '8px' }}>{user.name}</span>
+                   <span className="hide-on-mobile" style={{ marginRight: '8px' }}>{displayName}</span>
                 </div>
               </button>
               
