@@ -5,18 +5,47 @@ from urllib.parse import quote
 from typing import List, Dict, Any
 import concurrent.futures
 
+import random
+
 def fetch_job_detail(job: Dict[str, Any], headers: Dict[str, str]) -> Dict[str, Any]:
     if not job.get("job_id"):
         return job
-    detail_url = f"https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job['job_id']}"
-    resp = requests.get(detail_url, headers=headers)
+        
+    # Introduce jitter to avoid tripping rate limits instantaneously with multithreading
+    time.sleep(random.uniform(0.5, 2.0))
     
-    if resp.status_code == 200:
+    detail_url = f"https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job['job_id']}"
+    
+    # Retry logic
+    resp = None
+    for attempt in range(3):
+        resp = requests.get(detail_url, headers=headers)
+        if resp.status_code == 200:
+            break
+        elif resp.status_code == 429:
+            time.sleep(2 + attempt * 2)  # Exponential backoff
+        else:
+            break
+            
+    if resp and resp.status_code == 200:
         detail_soup = BeautifulSoup(resp.text, "html.parser")
         desc_el = detail_soup.find("div", class_="show-more-less-html__markup")
         criteria = detail_soup.find_all("li", class_="description__job-criteria-item")
         
-        job["description"] = desc_el.text.strip() if desc_el else None
+        if desc_el:
+            for br in desc_el.find_all("br"):
+                br.replace_with("\n")
+            for li in desc_el.find_all("li"):
+                li.insert(0, "• ")
+                li.append("\n")
+            for p in desc_el.find_all(["p", "h1", "h2", "h3", "h4"]):
+                p.append("\n")
+            
+            raw_text = desc_el.get_text()
+            lines = [line.strip() for line in raw_text.splitlines()]
+            job["description"] = "\n".join(lines).strip()
+        else:
+            job["description"] = None
         
         tags = []
         for item in criteria:
@@ -94,12 +123,32 @@ def scrape_linkedin_jobs(
             company_el = card.find("h4", class_="base-search-card__subtitle")
             location_el = card.find("span", class_="job-search-card__location")
             link_el = card.find("a", class_="base-card__full-link")
+            
+            salary_el = card.find("span", class_="job-search-card__salary-info")
+            img_el = card.find("img")
 
             title = title_el.text.strip() if title_el else None
             company = company_el.text.strip() if company_el else None
             loc = location_el.text.strip() if location_el else None
             link = link_el["href"].split("?")[0] if link_el else None
-            job_id = link.split("/")[-1] if link and link.endswith("/") else None
+            
+            salary = salary_el.text.strip() if salary_el else "Undisclosed Salary"
+            
+            logo = None
+            if img_el:
+                logo = img_el.get("data-delayed-url") or img_el.get("src")
+            
+            job_id = None
+            if link:
+                parts = [p for p in link.split("/") if p]
+                if parts:
+                    last_part = parts[-1]
+                    if last_part.isdigit():
+                        job_id = last_part
+                    elif "-" in last_part:
+                        potential_id = last_part.split("-")[-1]
+                        if potential_id.isdigit():
+                            job_id = potential_id
 
             jobs.append({
                 "title": title,
@@ -107,6 +156,8 @@ def scrape_linkedin_jobs(
                 "location": loc,
                 "link": link,
                 "job_id": job_id,
+                "salary": salary,
+                "logo": logo,
             })
 
         if len(jobs) >= max_jobs:

@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { FileSearch, ChevronLeft, ChevronRight } from 'lucide-react';
 import JobFilters from '../components/JobFilters';
 import JobCard from '../components/JobCard';
+import JobModal from '../components/JobModal';
 import './Dashboard.css';
 
 export default function Dashboard() {
@@ -11,7 +12,10 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   
+  const [selectedJob, setSelectedJob] = useState(null);
+  
   const [currentPage, setCurrentPage] = useState(1);
+
   const jobsPerPage = 20;
 
   const indexOfLastJob = currentPage * jobsPerPage;
@@ -87,7 +91,7 @@ export default function Dashboard() {
               
               <div className="jobs-list">
                 {currentJobs.map((job, idx) => (
-                  <JobCard key={job.job_id || idx} job={job} />
+                  <JobCard key={job.job_id || idx} job={job} onClick={setSelectedJob} />
                 ))}
               </div>
 
@@ -124,6 +128,10 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {selectedJob && (
+        <JobModal job={selectedJob} onClose={() => setSelectedJob(null)} />
+      )}
     </div>
   );
 }
