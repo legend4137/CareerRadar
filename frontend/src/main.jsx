@@ -6,6 +6,7 @@ import App from './App.jsx';
 
 // Read Google Client ID from environment variables
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
+console.log(GOOGLE_CLIENT_ID);
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
