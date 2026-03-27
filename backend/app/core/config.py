@@ -1,10 +1,16 @@
 import os
+from dotenv import load_dotenv
+
+# Automatically load variables from the .env file
+load_dotenv()
 
 class Settings:
     PROJECT_NAME = 'CareerRadar'
-    SECRET_KEY = os.getenv("SECRET_KEY", "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7")
-    ALGORITHM = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
-    GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "908553415672-91ubhsl446upi2g5adumfacade7uh4fj.apps.googleusercontent.com")
+    SECRET_KEY = os.getenv("SECRET_KEY", "fallback-dev-secret-key-only")
+    ALGORITHM = os.getenv("ALGORITHM", "HS256")
+    ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "10080"))
+
+    # Production Google Client ID MUST come from environment
+    GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 
 settings = Settings()

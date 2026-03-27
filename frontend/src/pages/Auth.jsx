@@ -29,7 +29,7 @@ export default function Auth() {
       const { credential } = credentialResponse;
       
       // Send the Google JWT Token to our FastAPI Backend to verify and create session
-      const response = await axios.post('http://localhost:8001/api/auth/google', {
+      const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/google`, {
         token: credential
       });
 
@@ -40,7 +40,8 @@ export default function Auth() {
       
     } catch (err) {
       console.error("Backend Auth Error:", err);
-      setError("Failed to authenticate with the server. Did you set up the real Google Client ID in backend?");
+      const backendMsg = err.response?.data?.detail;
+      setError(backendMsg ? `Server rejected token: ${backendMsg}` : `Network Error: ${err.message}. Is FastAPI running?`);
     }
   };
 

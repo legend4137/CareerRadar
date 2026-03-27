@@ -80,9 +80,19 @@ export default function Dashboard() {
     setCurrentPage(1);
 
     try {
-      const url = buildUrl(activeSource, filters);
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to fetch jobs.');
+      const queryParams = new URLSearchParams();
+      if (filters.keyword) queryParams.append('keyword', filters.keyword);
+      if (filters.location) queryParams.append('location', filters.location);
+      if (filters.jobType) queryParams.append('jobType', filters.jobType);
+      if (filters.remoteFilter) queryParams.append('remoteFilter', filters.remoteFilter);
+      if (filters.experienceLevel) queryParams.append('experienceLevel', filters.experienceLevel);
+      if (filters.dateSincePosted) queryParams.append('dateSincePosted', filters.dateSincePosted);
+      queryParams.append('limit', '150');
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/jobs/search?${queryParams.toString()}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch jobs.');
+      }
       const data = await response.json();
       // Inject source label into each job for the modal "Apply on X" text
       const labelled = (data.jobs || []).map((j) => ({

@@ -19,7 +19,7 @@ def google_auth(request: GoogleAuthRequest, db: Session = Depends(get_db)):
     try:
         # Verify Google token using google-auth library
         idinfo = id_token.verify_oauth2_token(
-            request.token, requests.Request(), settings.GOOGLE_CLIENT_ID
+            request.token, requests.Request(), settings.GOOGLE_CLIENT_ID, clock_skew_in_seconds=10
         )
         # ID token is valid. Extract user info
         google_id = idinfo['sub']
