@@ -50,8 +50,17 @@ const SOURCE_CONFIG = {
   },
 };
 
-export default function JobFilters({ onSearch, isLoading, source = 'linkedin' }) {
-  const [keyword, setKeyword] = useState('');
+export default function JobFilters({ onSearch, isLoading, source = 'linkedin', defaultKeyword = '' }) {
+  const [keyword, setKeyword] = useState(defaultKeyword);
+  const [hasInitialized, setHasInitialized] = useState(false);
+
+  // Sync the default user keyword into the text box precisely once when it loads
+  useEffect(() => {
+    if (defaultKeyword && !hasInitialized) {
+      setKeyword(defaultKeyword);
+      setHasInitialized(true);
+    }
+  }, [defaultKeyword, hasInitialized]);
   const [location, setLocation] = useState('');
   const [jobType, setJobType] = useState('');
   const [remoteFilter, setRemoteFilter] = useState('');

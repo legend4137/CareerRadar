@@ -38,7 +38,7 @@ const OnboardingRoute = ({ children }) => {
   
   if (loading) return <div>Loading...</div>;
   if (!user) return <Navigate to="/login" replace />;
-  if (user.profileComplete) return <Navigate to="/dashboard" replace />;
+  // Allow users with complete profiles to return to the onboarding flow to edit their preferences.
   
   return children;
 };

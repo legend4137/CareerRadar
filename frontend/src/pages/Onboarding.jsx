@@ -11,12 +11,13 @@ const ROLES = [
   { id: 'data', name: 'Data Analyst', icon: LineChart },
   { id: 'marketing', name: 'Marketing', icon: Megaphone },
   { id: 'sales', name: 'Sales', icon: Target },
-  { id: 'other', name: 'Other / Product', icon: Briefcase },
+  { id: 'other', name: 'Other', icon: Briefcase },
 ];
 
 export default function Onboarding() {
   const [step, setStep] = useState(1);
   const [selectedRole, setSelectedRole] = useState(null);
+  const [customRole, setCustomRole] = useState('');
   const [jobDescription, setJobDescription] = useState('');
   const [file, setFile] = useState(null);
   const [existingFileName, setExistingFileName] = useState('');
@@ -34,7 +35,13 @@ export default function Onboarding() {
         const data = response.data;
         if (data.role) {
           const matchedRole = ROLES.find(r => r.name === data.role);
-          if (matchedRole) setSelectedRole(matchedRole);
+          if (matchedRole) {
+            setSelectedRole(matchedRole);
+          } else {
+            // User previously entered a custom role
+            setSelectedRole(ROLES.find(r => r.id === 'other'));
+            setCustomRole(data.role);
+          }
         }
         if (data.job_description) {
           setJobDescription(data.job_description);
@@ -56,7 +63,13 @@ export default function Onboarding() {
     setSubmitting(true);
     try {
       const formData = new FormData();
-      if (selectedRole) formData.append('role', selectedRole.name);
+      let finalRole = '';
+      if (selectedRole) {
+        finalRole = selectedRole.id === 'other' && customRole.trim() !== '' 
+          ? customRole.trim() 
+          : selectedRole.name;
+        formData.append('role', finalRole);
+      }
       if (jobDescription) formData.append('job_description', jobDescription);
       if (file) formData.append('resume', file);
 
@@ -70,7 +83,7 @@ export default function Onboarding() {
 
       // Update local auth context
       updateProfile({
-        role: selectedRole.name,
+        role: finalRole,
         profileComplete: response.data.profileComplete
       });
       
@@ -119,6 +132,22 @@ export default function Onboarding() {
               })}
             </div>
 
+            {selectedRole?.id === 'other' && (
+              <div className="custom-role-container animate-fade-in" style={{ width: '100%', marginBottom: '1.5rem', textAlign: 'left' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  Specify Your Preferred Role
+                </label>
+                <input 
+                  type="text" 
+                  className="glass-panel" 
+                  placeholder="e.g. UX Designer, DevOps Engineer..." 
+                  value={customRole}
+                  onChange={(e) => setCustomRole(e.target.value)}
+                  style={{ width: '100%', padding: '1rem', color: 'white', border: '1px solid var(--glass-border)', borderRadius: '8px', background: 'rgba(255,255,255,0.05)' }}
+                />
+              </div>
+            )}
+
             <div className="textarea-container" style={{ width: '100%', marginBottom: '2rem', textAlign: 'left' }}>
               <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
                 Target Job Description or Keywords (Optional)
@@ -135,7 +164,7 @@ export default function Onboarding() {
 
             <button 
               className="btn btn-primary step-next-btn"
-              disabled={!selectedRole}
+              disabled={!selectedRole || (selectedRole.id === 'other' && !customRole.trim())}
               onClick={() => setStep(2)}
             >
               Continue <ChevronRight size={18} />

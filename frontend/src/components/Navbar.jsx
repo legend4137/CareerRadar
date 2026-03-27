@@ -19,7 +19,7 @@ export default function Navbar() {
 
   const handleUpdateProfile = () => {
     setDropdownOpen(false);
-    navigate('/onboarding');
+    navigate('/profile');
   };
 
   // Close dropdown when clicking outside
@@ -52,6 +52,13 @@ export default function Navbar() {
             <a href="#problem" className="nav-link">The Problem</a>
             <a href="#solution" className="nav-link">Our Solution</a>
             <a href="#features" className="nav-link">Features</a>
+          </nav>
+        )}
+
+        {/* Render authenticated nav links */}
+        {user && user.profileComplete && (
+          <nav className="navbar-links">
+            <Link to="/dashboard" className="nav-link" style={{ fontWeight: 600 }}>Dashboard</Link>
           </nav>
         )}
         
